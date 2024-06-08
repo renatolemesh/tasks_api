@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ForbiddenException;
+use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    // public function __construct()
+    // {
+    //     $this->middleware([AdminMiddleware::class])->only(['destroy', 'update']);
+    // }
 
     public function show(Request $request)
     {
@@ -39,7 +45,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first(); //vai procurar o user conforme email correspondente
 
-        if (! $user || ! Hash::check($request->password, $user->password)) { //checa se encontrou o user, e se o password está correto
+        if (!$user || !Hash::check($request->password, $user->password)) { //checa se encontrou o user, e se o password está correto
             return response()->json([
                 'message' => 'The provided credentials are incorrect.',
             ]);
@@ -64,9 +70,10 @@ class AuthController extends Controller
         $authenticatedUser = $request->user();
 
         // Se o usuário autenticado não for admin e não for o mesmo usuário, nega o acesso
-        if ($authenticatedUser->id !== $user->id && $authenticatedUser->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden'], 403); //Forbidden significa "sem autorização"
-        }
+        throw_if(
+            $authenticatedUser->id !== $user->id && $authenticatedUser->role !== 'admin',
+            ForbiddenException::class
+        );
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -107,3 +114,20 @@ class AuthController extends Controller
         return response()->json(['message' => 'User deleted successfully'], 200);
     }
 }
+
+
+/**
+ * 
+ * Cargos | Papéis
+ * Permissões
+ * 
+ * Jornal
+ * > Editor
+ * > Escritoras
+ * > Revisor
+ * > Dono do Jornal (boss)
+ * -> ACL
+ * 
+ * Gate | Policies
+ * 
+ */
